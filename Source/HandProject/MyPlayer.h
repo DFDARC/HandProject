@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "HandProjectCharacter.h"
-#include "GameFramework/CharacterMovementComponent.h" // Necesario para modificar velocidades
+#include "GameFramework/CharacterMovementComponent.h"
 #include "MyPlayer.generated.h"
 
 UCLASS()
@@ -27,6 +27,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health")
 	float MaxHealth = 100.0f;
 
+	// --- FUNCIÓN DE DAÑO ---
+	// La marcamos como BlueprintCallable para poder usarla en tus nodos de Blueprints
+	UFUNCTION(BlueprintCallable, Category = "Health")
+	void TakeCustomDamage(float DamageAmount);
+
 	// --- LÓGICA DE MOVIMIENTO Y SPRINT ---
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stamina")
 	bool bIsSprinting = false;
@@ -34,13 +39,11 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stamina")
 	bool bIsExhausted = false;
 
-	// Función para resetear el estado de agotamiento tras los 10 segundos
 	void ResetExhaustion();
 
 protected:
 	virtual void Tick(float DeltaTime) override;
 
 private:
-	// Manejador para el temporizador de 10 segundos
 	FTimerHandle ExhaustionTimerHandle;
 };

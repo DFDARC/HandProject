@@ -1,70 +1,81 @@
 #include "MyPlayer.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "TimerManager.h" // Necesario para el temporizador de 10s
+#include "TimerManager.h"
 
 AMyPlayer::AMyPlayer()
 {
-	PrimaryActorTick.bCanEverTick = true;
+    PrimaryActorTick.bCanEverTick = true;
+}
+
+// --- IMPLEMENTACIÓN DE DAÑO ---
+void AMyPlayer::TakeCustomDamage(float DamageAmount)
+{
+    // Restamos el daño a la vida actual
+    CurrentHealth -= DamageAmount;
+
+    // Aseguramos que la vida no baje de 0
+    CurrentHealth = FMath::Clamp(CurrentHealth, 0.0f, MaxHealth);
+
+    // Feedback visual en el log para pruebas
+    UE_LOG(LogTemp, Warning, TEXT("Vida recibida: %f. Vida actual: %f"), DamageAmount, CurrentHealth);
+
+    // Opcional: Trigger de muerte si llega a 0
+    if (CurrentHealth <= 0.0f)
+    {
+        UE_LOG(LogTemp, Error, TEXT("El jugador ha muerto"));
+    }
 }
 
 void AMyPlayer::Tick(float DeltaTime)
 {
-	Super::Tick(DeltaTime);
+    Super::Tick(DeltaTime);
 
-	// 1. LÓGICA DE CONSUMO / RECUERACIÓN
-	// Solo gasta si presiona Shift, se está moviendo y NO está agotado
-	if (bIsSprinting && GetVelocity().Size() > 0.0f && !bIsExhausted)
-	{
-		CurrentStamina -= 15.0f * DeltaTime;
+    // 1. LÓGICA DE CONSUMO / RECUPERACIÓN
+    if (bIsSprinting && GetVelocity().Size() > 0.0f && !bIsExhausted)
+    {
+        CurrentStamina -= 15.0f * DeltaTime;
 
-		// Si llega a 0, activar castigo de 10 segundos
-		if (CurrentStamina <= 0.0f)
-		{
-			CurrentStamina = 0.0f;
-			bIsExhausted = true;
-			bIsSprinting = false;
+        if (CurrentStamina <= 0.0f)
+        {
+            CurrentStamina = 0.0f;
+            bIsExhausted = true;
+            bIsSprinting = false;
 
-			// Iniciar cronómetro de 10 segundos para resetear bIsExhausted
-			GetWorld()->GetTimerManager().SetTimer(
-				ExhaustionTimerHandle,
-				this,
-				&AMyPlayer::ResetExhaustion,
-				10.0f,
-				false
-			);
-		}
-	}
-	// Solo recupera si NO está agotado y NO está intentando correr
-	else if (!bIsExhausted && !bIsSprinting)
-	{
-		CurrentStamina += 10.0f * DeltaTime;
-	}
+            GetWorld()->GetTimerManager().SetTimer(
+                ExhaustionTimerHandle,
+                this,
+                &AMyPlayer::ResetExhaustion,
+                10.0f,
+                false
+            );
+        }
+    }
+    else if (!bIsExhausted && !bIsSprinting)
+    {
+        CurrentStamina += 10.0f * DeltaTime;
+    }
 
-	CurrentStamina = FMath::Clamp(CurrentStamina, 0.0f, MaxStamina);
+    CurrentStamina = FMath::Clamp(CurrentStamina, 0.0f, MaxStamina);
 
-	// 2. CONTROL DE VELOCIDADES (Walk Speed y Acceleration)
-	if (bIsExhausted)
-	{
-		// Castigo: Velocidad y aceleración a 100
-		GetCharacterMovement()->MaxWalkSpeed = 100.0f;
-		GetCharacterMovement()->MaxAcceleration = 100.0f;
-	}
-	else if (bIsSprinting && CurrentStamina > 0.0f)
-	{
-		// Sprint: Velocidad base + 200 (ajusta el 600 según tu base)
-		GetCharacterMovement()->MaxWalkSpeed = 600.0f;
-		GetCharacterMovement()->MaxAcceleration = 2200.0f;
-	}
-	else
-	{
-		// Normal: Valores por defecto
-		GetCharacterMovement()->MaxWalkSpeed = 400.0f;
-		GetCharacterMovement()->MaxAcceleration = 2000.0f;
-	}
+    // 2. CONTROL DE VELOCIDADES
+    if (bIsExhausted)
+    {
+        GetCharacterMovement()->MaxWalkSpeed = 100.0f;
+        GetCharacterMovement()->MaxAcceleration = 100.0f;
+    }
+    else if (bIsSprinting && CurrentStamina > 0.0f)
+    {
+        GetCharacterMovement()->MaxWalkSpeed = 600.0f;
+        GetCharacterMovement()->MaxAcceleration = 2200.0f;
+    }
+    else
+    {
+        GetCharacterMovement()->MaxWalkSpeed = 400.0f;
+        GetCharacterMovement()->MaxAcceleration = 2000.0f;
+    }
 }
 
 void AMyPlayer::ResetExhaustion()
 {
-	bIsExhausted = false;
-	// Al ser false, el Tick permitirá que la estamina suba de nuevo
+    bIsExhausted = false;
 }
